@@ -17,30 +17,14 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      - name: Mostrar versiones
-        run: |
-          node --version
-          npm --version
-
       - name: Instalar dependencias
         run: npm install
 
-      - name: Compilar EXE
+      - name: Compilar EXE sin publicar
         shell: cmd
-        run: npm run dist
+        run: npm run dist -- --publish never
 
-      - name: Mostrar archivos generados
-        if: always()
-        shell: powershell
-        run: |
-          if (Test-Path dist) {
-            Get-ChildItem dist -Recurse
-          } else {
-            Write-Host "La carpeta dist no existe"
-          }
-
-      - name: Subir EXE
-        if: success()
+      - name: Subir ejecutables
         uses: actions/upload-artifact@v4
         with:
           name: WormGPT-Windows
