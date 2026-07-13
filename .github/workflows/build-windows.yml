@@ -9,22 +9,42 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Instalar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Mostrar versiones
+        run: |
+          node --version
+          npm --version
 
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install
 
       - name: Compilar EXE
+        shell: cmd
         run: npm run dist
 
-      - name: Subir archivos compilados
+      - name: Mostrar archivos generados
+        if: always()
+        shell: powershell
+        run: |
+          if (Test-Path dist) {
+            Get-ChildItem dist -Recurse
+          } else {
+            Write-Host "La carpeta dist no existe"
+          }
+
+      - name: Subir EXE
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: WormGPT-Windows
-          path: dist/**
+          path: |
+            dist/*.exe
+            dist/win-unpacked/**
+          if-no-files-found: error
