@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#05060b" />
+  <title>BRAVIA // Paper Trading Lab</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="scanlines"></div>
+  <main class="shell">
+    <header class="topbar panel">
+      <div>
+        <div class="eyebrow">AUTONOMOUS MARKET LAB // PHASE 1</div>
+        <h1>BRAVIA <span>TRADING ENGINE</span></h1>
+      </div>
+      <div class="status-cluster">
+        <div class="status-pill"><i id="feedDot"></i><span id="feedStatus">CONNECTING</span></div>
+        <div class="status-pill paper">PAPER ONLY</div>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="panel balance-card">
+        <div class="panel-title">PAPER WALLET</div>
+        <div class="balance" id="equity">$10.00</div>
+        <div class="pnl" id="pnl">+$0.00 · +0.00%</div>
+        <div class="kv"><span>Cash</span><b id="cash">$10.00</b></div>
+        <div class="kv"><span>Exposure</span><b id="exposure">$0.00</b></div>
+        <div class="kv"><span>Trades</span><b id="tradeCount">0</b></div>
+        <div class="controls-row">
+          <button id="startBtn" class="btn primary">▶ START BOT</button>
+          <button id="stopBtn" class="btn danger" disabled>■ STOP</button>
+        </div>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="panel-title">LIVE MARKET</div>
+            <div class="pair" id="chartPair">BTC-USD</div>
+          </div>
+          <div class="price-block">
+            <strong id="chartPrice">—</strong>
+            <span id="chartChange">—</span>
+          </div>
+        </div>
+        <canvas id="chart" aria-label="live market chart"></canvas>
+        <div class="pair-switch">
+          <button data-pair="BTC-USD" class="chip active">BTC</button>
+          <button data-pair="ETH-USD" class="chip">ETH</button>
+          <button data-pair="SOL-USD" class="chip">SOL</button>
+        </div>
+      </article>
+
+      <article class="panel mode-card">
+        <div class="panel-title">TRADING MODE</div>
+        <div class="mode-grid" id="modeGrid">
+          <button data-mode="AUTO" class="mode active"><b>AUTO</b><span>Adaptive</span></button>
+          <button data-mode="ULTRA" class="mode"><b>ULTRA</b><span>Hyper scalp</span></button>
+          <button data-mode="FAST" class="mode"><b>FAST</b><span>Short trades</span></button>
+          <button data-mode="BALANCED" class="mode"><b>BALANCED</b><span>More confirmation</span></button>
+          <button data-mode="TREND" class="mode"><b>TREND</b><span>Longer holds</span></button>
+          <button data-mode="CUSTOM" class="mode"><b>CUSTOM</b><span>Your rules</span></button>
+        </div>
+        <div class="mode-stats">
+          <div><span>Signal threshold</span><b id="cfgThreshold">—</b></div>
+          <div><span>Cooldown</span><b id="cfgCooldown">—</b></div>
+          <div><span>TP / SL</span><b id="cfgExit">—</b></div>
+          <div><span>Position size</span><b id="cfgSize">—</b></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="scanner-grid" id="scanner"></section>
+
+    <section class="lower-grid">
+      <article class="panel positions-panel">
+        <div class="panel-title">OPEN POSITIONS</div>
+        <div id="positions" class="empty">No open positions.</div>
+      </article>
+
+      <article class="panel terminal-panel">
+        <div class="terminal-head">
+          <div class="panel-title">LIVE EXECUTION LOG</div>
+          <button id="clearLog" class="text-btn">CLEAR</button>
+        </div>
+        <div id="log" class="terminal"></div>
+      </article>
+    </section>
+
+    <section class="panel stats-panel">
+      <div class="panel-title">SESSION ANALYTICS</div>
+      <div class="stats-grid">
+        <div><span>Win rate</span><b id="winRate">0%</b></div>
+        <div><span>Realized PnL</span><b id="realized">$0.00</b></div>
+        <div><span>Fees paid</span><b id="fees">$0.00</b></div>
+        <div><span>Max drawdown</span><b id="drawdown">0.00%</b></div>
+        <div><span>Best trade</span><b id="bestTrade">—</b></div>
+        <div><span>Worst trade</span><b id="worstTrade">—</b></div>
+      </div>
+      <div class="assumptions">Simulation includes configurable trading fees + slippage. No real orders or wallet keys are used in Phase 1.</div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
