@@ -1,0 +1,25 @@
+name: BRAVIA CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Static release checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check server/index.mjs
+          grep -q 'BRAVIA // Trading Lab' index.html
+          grep -q 'LIVE_EXECUTION_ENABLED = false' server/index.mjs
+          grep -q 'overall: PASS' docs/qa/BROWSER.txt
+          test -s assets/screenshot-desktop.png
+          test -s assets/screenshot-mobile.png
