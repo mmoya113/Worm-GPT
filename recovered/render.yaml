@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bravia-backend
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /health
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: https://mmoya113.github.io
+      - key: BIRDEYE_API_KEY
+        sync: false
+      - key: HELIUS_API_KEY
+        sync: false
+      - key: GOPLUS_ACCESS_TOKEN
+        sync: false
+      - key: JUPITER_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5
