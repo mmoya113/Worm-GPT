@@ -35,9 +35,8 @@ jobs:
           await page.waitForSelector('#view-sniper.active');
           await page.locator('#v35More').tap();
           await page.waitForSelector('#v35Sheet:not(.hidden)');
-          await page.locator('[data-theme-choice="ocean"]').first().tap();
+          await page.locator('#v35Sheet [data-theme-choice="ocean"]').tap();
           const theme=await page.locator('html').getAttribute('data-theme');if(theme!=='ocean')throw new Error('Theme tap failed');
-          await page.locator('#v35More').tap().catch(()=>{});
           if(await page.locator('#v35Sheet').evaluate(el=>el.classList.contains('hidden')))await page.locator('#v35More').tap();
           await page.locator('#v35Sheet [data-v35-view="rugcheck"]').tap();
           await page.waitForSelector('#view-rugcheck.active');
