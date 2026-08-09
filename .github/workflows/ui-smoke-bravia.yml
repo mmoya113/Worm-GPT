@@ -1,0 +1,45 @@
+name: BRAVIA desktop and mobile UI QA
+
+on:
+  push:
+    paths:
+      - .github/workflows/ui-smoke-bravia.yml
+
+permissions:
+  contents: write
+
+jobs:
+  ui-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          mkdir -p /tmp/bravia-pw
+          cd /tmp/bravia-pw
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Run desktop and iPhone-sized smoke tests
+        shell: bash
+        run: |
+          python3 -m http.server 4173 --directory recovered >/tmp/bravia-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 1
+          cp .bootstrap/smoke.cjs /tmp/bravia-pw/smoke.cjs
+          cd /tmp/bravia-pw
+          node smoke.cjs
+      - name: Commit QA screenshots
+        if: success()
+        shell: bash
+        run: |
+          git config user.name 'BRAVIA QA'
+          git config user.email 'actions@users.noreply.github.com'
+          git add recovered/QA_BROWSER.txt recovered/assets/screenshot-desktop.png recovered/assets/screenshot-mobile.png
+          git commit -m 'Add verified desktop and mobile BRAVIA screenshots' || exit 0
+          git push origin HEAD:main
