@@ -1,0 +1,36 @@
+name: Refresh BRAVIA V3.1 documentation
+
+on:
+  push:
+    paths:
+      - .github/workflows/refresh-readme-v31.yml
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update README for dual sniper streams
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('README.md');s=p.read_text()
+          s=s.replace('| Real-time new-token path | ✅* | Birdeye WebSocket → BRAVIA backend → browser SSE when API key/backend are configured |','| Real-time new-token path | ✅* | Helius Pump.fun creation stream + Birdeye new-listing stream → backend → browser SSE |')
+          s=s.replace('DEX Screener / Birdeye stream','DEX Screener / Helius / Birdeye')
+          old='''**Real-time backend path**\n\n```text\nBirdeye SUBSCRIBE_TOKEN_NEW_LISTING\n        ↓\nBRAVIA backend receives event\n        ↓\nDEX pair / liquidity is resolved\n        ↓\nSSE pushes candidate to browser\n        ↓\nfilters run immediately\n        ↓\nPAPER BUY when preset passes\n```'''
+          new='''**Real-time backend path**\n\n```text\nHelius Pump.fun creation tx ─┐\n                            ├→ mint detected\nBirdeye new-token listing ──┘\n                                  ↓\n                      throttled pair resolver\n                                  ↓\n                       market/liquidity ready?\n                                  ↓\n                       SSE candidate → browser\n                                  ↓\n                         sniper preset filters\n                                  ↓\n                    PAPER BUY only when passed\n```\n\nHelius watches the Pump.fun creation flow directly on Solana while Birdeye provides an independent new-listing feed. BRAVIA de-duplicates both sources and retries market resolution because a mint can exist before a usable/indexed market does.'''
+          if old not in s: raise SystemExit('sniper README block not found')
+          s=s.replace(old,new)
+          s=s.replace('| Birdeye | real-time new-token stream + holder intelligence |','| Birdeye | independent real-time new-listing stream + holder intelligence |')
+          s=s.replace('| Helius | Solana RPC/read layer |','| Helius | Pump.fun creation stream + Solana RPC/read layer |')
+          p.write_text(s)
+          PY
+          git config user.name 'BRAVIA Docs'
+          git config user.email 'actions@users.noreply.github.com'
+          git add README.md
+          git commit -m 'Document BRAVIA V3.1 dual-source sniper' || exit 0
+          git push origin HEAD:main
