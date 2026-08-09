@@ -4,6 +4,7 @@ const fs = require('fs');
 (async()=>{
   const browser=await chromium.launch({headless:true});
   const results=[];
+  async function clickView(page,v){await page.locator(`[data-view="${v}"]:visible`).first().click();await page.waitForTimeout(120)}
   async function run(name, viewport, mobile=false){
     const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?2:1});
     const page=await context.newPage();
@@ -22,24 +23,22 @@ const fs = require('fs');
     if(!equity.includes('$'))errors.push(`bad equity: ${equity}`);
     if(!canvas||canvas.width<280||canvas.height<180)errors.push(`chart too small: ${JSON.stringify(canvas)}`);
 
-    const views=['markets','memes','sniper','arena','setup'];
-    for(const v of views){
-      const nav=page.locator(`[data-view="${v}"]`).first();
-      await nav.click();await page.waitForTimeout(120);
+    for(const v of ['markets','memes','sniper','arena','setup']){
+      await clickView(page,v);
       const active=await page.locator(`#view-${v}`).evaluate(el=>el.classList.contains('active'));
       if(!active)errors.push(`view ${v} did not activate`);
     }
-    await page.locator('[data-view="memes"]').first().click();
+    await clickView(page,'memes');
     await page.locator('#memeAutoToggle').click();
-    await page.locator('[data-view="sniper"]').first().click();
+    await clickView(page,'sniper');
     await page.locator('#armSniper').click();
     await page.locator('[data-preset="FAST"]').click();
-    await page.locator('[data-view="arena"]').first().click();
+    await clickView(page,'arena');
     await page.locator('#arenaToggle').click();
     await page.waitForTimeout(900);
     const arenaRows=await page.locator('#arenaRows .leader-row').count();
     if(arenaRows!==8)errors.push(`arena rows: ${arenaRows}`);
-    await page.locator('[data-view="overview"]').first().click();
+    await clickView(page,'overview');
     await page.waitForTimeout(350);
     await page.screenshot({path:`recovered/assets/screenshot-${name}.png`,fullPage:true});
     results.push({name,title,equity,chart:canvas,arenaRows,errors});
