@@ -12,6 +12,7 @@ const JUPITER_API_KEY = process.env.JUPITER_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5';
 const LIVE_EXECUTION_ENABLED = false; // Deliberate hard lock. Do not change casually.
+const PUMP_FUN_PROGRAM = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 
 app.use(cors({origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN}));
 app.use(express.json({limit:'200kb'}));
@@ -21,6 +22,17 @@ const sseClients = new Set();
 let birdeyeWs = null;
 let birdeyeReconnect = null;
 let lastBirdeyeEvent = 0;
+let heliusWs = null;
+let heliusReconnect = null;
+let heliusPing = null;
+let lastHeliusEvent = 0;
+
+// Pair resolution is intentionally throttled below DEX Screener's public rate ceiling.
+// A mint can exist before a tradable/indexed pair exists, so new mints are queued and retried.
+const pairQueue = [];
+const queuedMints = new Set();
+const resolvedMints = new Map();
+let pairResolverBusy = false;
 
 const timeoutFetch = (url, options={}, ms=8000) => fetch(url,{...options,signal:AbortSignal.timeout(ms)});
 const okJson = async r => { if(!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json(); };
@@ -29,7 +41,7 @@ const safe = v => Number.isFinite(Number(v)) ? Number(v) : 0;
 app.get('/health', (_req,res) => res.json({
   ok:true,
   service:'bravia-backend',
-  version:'3.0.0',
+  version:'3.1.0',
   liveExecutionEnabled:LIVE_EXECUTION_ENABLED,
   providers:{
     birdeye:Boolean(BIRDEYE_API_KEY),
@@ -39,7 +51,12 @@ app.get('/health', (_req,res) => res.json({
     openai:Boolean(OPENAI_API_KEY),
     dexscreener:true
   },
-  sniperStream:{connected:birdeyeWs?.readyState===WebSocket.OPEN,lastEventAt:lastBirdeyeEvent||null}
+  sniperStream:{
+    birdeyeConnected:birdeyeWs?.readyState===WebSocket.OPEN,
+    heliusConnected:heliusWs?.readyState===WebSocket.OPEN,
+    lastEventAt:Math.max(lastBirdeyeEvent,lastHeliusEvent)||null,
+    pairQueue:pairQueue.length
+  }
 }));
 
 app.get('/api/sniper/stream', (req,res) => {
@@ -47,7 +64,7 @@ app.get('/api/sniper/stream', (req,res) => {
   res.setHeader('Cache-Control','no-cache, no-transform');
   res.setHeader('Connection','keep-alive');
   res.flushHeaders?.();
-  res.write(`event: ready\ndata: ${JSON.stringify({ok:true,source:BIRDEYE_API_KEY?'birdeye':'none'})}\n\n`);
+  res.write(`event: ready\ndata: ${JSON.stringify({ok:true,sources:{birdeye:Boolean(BIRDEYE_API_KEY),helius:Boolean(HELIUS_API_KEY)}})}\n\n`);
   sseClients.add(res);
   const heartbeat=setInterval(()=>res.write(': ping\n\n'),20000);
   req.on('close',()=>{clearInterval(heartbeat);sseClients.delete(res)});
@@ -62,18 +79,54 @@ async function dexPairForToken(address){
   } catch { return null; }
 }
 
+function enqueueMint(address, source, raw=null){
+  address=String(address||'').trim();
+  if(address.length<30)return;
+  const resolvedAt=resolvedMints.get(address)||0;
+  if(Date.now()-resolvedAt<15*60_000 || queuedMints.has(address))return;
+  queuedMints.add(address);
+  pairQueue.push({address,source,raw,attempts:0,nextAt:Date.now()+120,detectedAt:Date.now()});
+  // The browser receives immediate detection, but paper entry only happens after market/liquidity data resolves.
+  broadcast({source,receivedAt:Date.now(),address,stage:'mint-detected'});
+}
+
+async function processPairQueue(){
+  if(pairResolverBusy||!pairQueue.length)return;
+  const item=pairQueue.shift();
+  if(item.nextAt>Date.now()){pairQueue.push(item);return}
+  pairResolverBusy=true;
+  let pair=null;
+  try{pair=await dexPairForToken(item.address)}finally{pairResolverBusy=false}
+  if(pair){
+    queuedMints.delete(item.address);
+    resolvedMints.set(item.address,Date.now());
+    broadcast({source:item.source,receivedAt:Date.now(),detectedAt:item.detectedAt,address:item.address,stage:'tradable-pair',pair});
+    return;
+  }
+  item.attempts+=1;
+  if(item.attempts<5){
+    const backoffs=[450,900,1800,4000,8000];
+    item.nextAt=Date.now()+backoffs[item.attempts-1];
+    pairQueue.push(item);
+  }else{
+    queuedMints.delete(item.address);
+    broadcast({source:item.source,receivedAt:Date.now(),address:item.address,stage:'pair-not-yet-indexed'});
+  }
+}
+
+setInterval(processPairQueue,260).unref?.();
+setInterval(()=>{const cutoff=Date.now()-15*60_000;for(const [mint,t] of resolvedMints)if(t<cutoff)resolvedMints.delete(mint)},60_000).unref?.();
+
 function tokenAddressFromBirdeye(msg){
   const d=msg?.data || msg?.result || msg;
   return d?.address || d?.token_address || d?.tokenAddress || d?.mint || d?.base?.address || d?.baseToken?.address || '';
 }
 
-async function onBirdeyeMessage(raw){
+function onBirdeyeMessage(raw){
   let msg; try{msg=JSON.parse(String(raw))}catch{return}
   const address=tokenAddressFromBirdeye(msg); if(!address)return;
   lastBirdeyeEvent=Date.now();
-  const pair=await dexPairForToken(address);
-  if(pair) broadcast({source:'birdeye-new-listing',receivedAt:Date.now(),address,pair});
-  else broadcast({source:'birdeye-new-listing',receivedAt:Date.now(),address,raw:msg});
+  enqueueMint(address,'birdeye-new-listing',msg);
 }
 
 function connectBirdeye(){
@@ -87,6 +140,38 @@ function connectBirdeye(){
   birdeyeWs.on('message',onBirdeyeMessage);
   birdeyeWs.on('error',()=>{});
   birdeyeWs.on('close',()=>{birdeyeReconnect=setTimeout(connectBirdeye,2500)});
+}
+
+function connectHelius(){
+  if(!HELIUS_API_KEY)return;
+  clearTimeout(heliusReconnect);
+  clearInterval(heliusPing);
+  const url=`wss://mainnet.helius-rpc.com/?api-key=${encodeURIComponent(HELIUS_API_KEY)}`;
+  heliusWs=new WebSocket(url);
+  heliusWs.on('open',()=>{
+    heliusWs.send(JSON.stringify({
+      jsonrpc:'2.0',id:71,method:'transactionSubscribe',
+      params:[
+        {failed:false,accountInclude:[PUMP_FUN_PROGRAM]},
+        {commitment:'processed',encoding:'jsonParsed',transactionDetails:'full',maxSupportedTransactionVersion:0}
+      ]
+    }));
+    heliusPing=setInterval(()=>{if(heliusWs?.readyState===WebSocket.OPEN)heliusWs.ping()},30_000);
+  });
+  heliusWs.on('message',raw=>{
+    let msg;try{msg=JSON.parse(String(raw))}catch{return}
+    const result=msg?.params?.result;if(!result)return;
+    const tx=result?.transaction||{};
+    const logs=tx?.meta?.logMessages||[];
+    if(!logs.some(l=>String(l).includes('Instruction: InitializeMint2')))return;
+    const keys=(tx?.transaction?.message?.accountKeys||[]).map(k=>typeof k==='string'?k:k?.pubkey).filter(Boolean);
+    const mint=keys[1];
+    if(!mint)return;
+    lastHeliusEvent=Date.now();
+    enqueueMint(mint,'helius-pumpfun-create',{signature:result.signature||'',slot:result.slot||null});
+  });
+  heliusWs.on('error',()=>{});
+  heliusWs.on('close',()=>{clearInterval(heliusPing);heliusReconnect=setTimeout(connectHelius,2000)});
 }
 
 app.get('/api/security/:ca', async (req,res) => {
@@ -141,7 +226,6 @@ app.get('/api/wallet/:address/balance', async (req,res) => {
   }catch(e){res.status(502).json({error:e.message})}
 });
 
-
 app.post('/api/ai/review', async (req,res) => {
   if(!OPENAI_API_KEY)return res.status(503).json({error:'OPENAI_API_KEY not configured'});
   const payload=JSON.stringify(req.body||{}).slice(0,30000);
@@ -160,4 +244,8 @@ app.get('/api/live/capabilities', (_req,res)=>res.json({
 }));
 
 app.use((_req,res)=>res.status(404).json({error:'Not found'}));
-app.listen(PORT,()=>{console.log(`BRAVIA backend listening on :${PORT}`);connectBirdeye()});
+app.listen(PORT,()=>{
+  console.log(`BRAVIA backend listening on :${PORT}`);
+  connectBirdeye();
+  connectHelius();
+});
