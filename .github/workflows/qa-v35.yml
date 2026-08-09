@@ -1,0 +1,48 @@
+name: BRAVIA V3.5 Browser QA
+on:
+  push:
+    paths:
+      - .github/workflows/qa-v35.yml
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.54.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Run touch and theme regression
+        shell: bash
+        run: |
+          python3 -m http.server 8080 >/tmp/bravia-http.log 2>&1 &
+          cat > qa-v35.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
+          const errors=[];page.on('pageerror',e=>errors.push(e.message));
+          await page.goto('http://127.0.0.1:8080/?demo=1&v=35',{waitUntil:'networkidle'});
+          await page.locator('#choosePaper').tap();
+          await page.locator('.mobile-nav [data-v35-view="memes"]').tap();
+          await page.waitForSelector('#view-memes.active');
+          await page.locator('.mobile-nav [data-v35-view="sniper"]').tap();
+          await page.waitForSelector('#view-sniper.active');
+          await page.locator('#v35More').tap();
+          await page.waitForSelector('#v35Sheet:not(.hidden)');
+          await page.locator('[data-theme-choice="ocean"]').first().tap();
+          const theme=await page.locator('html').getAttribute('data-theme');if(theme!=='ocean')throw new Error('Theme tap failed');
+          await page.locator('#v35More').tap().catch(()=>{});
+          if(await page.locator('#v35Sheet').evaluate(el=>el.classList.contains('hidden')))await page.locator('#v35More').tap();
+          await page.locator('#v35Sheet [data-v35-view="rugcheck"]').tap();
+          await page.waitForSelector('#view-rugcheck.active');
+          if(errors.length)throw new Error(errors.join(' | '));
+          console.log('PASS first-tap nav + More sheet + theme + RugCheck on 393x852 touch viewport');
+          await browser.close();
+          JS
+          node qa-v35.mjs
