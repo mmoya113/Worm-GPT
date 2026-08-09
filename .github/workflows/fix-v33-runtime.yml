@@ -1,0 +1,30 @@
+name: Fix BRAVIA V3.3 runtime
+on:
+  push:
+    paths:
+      - .github/workflows/fix-v33-runtime.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix script scope and cache busting
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace('<script type="module" src="app.js"></script>','<script src="app.js?v=33"></script>')
+          s=s.replace('v32.js?v=32','v32.js?v=33').replace('v32.css?v=32','v32.css?v=33')
+          s=s.replace('BRAVIA TRADING ENGINE // V3','BRAVIA TRADING ENGINE // V3.3')
+          p.write_text(s)
+          Path('sw.js').write_text("""const CACHE='bravia-v33-shell';\nconst ASSETS=['./','./index.html','./style.css','./app.js?v=33','./v32.css?v=33','./v32.js?v=33','./icon.svg','./manifest.webmanifest'];\nself.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});\nself.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));\nself.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))))});\n""")
+          PY
+          git config user.name "BRAVIA Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js
+          git commit -m "Fix V3.3 runtime scope and iOS cache refresh"
+          git push
