@@ -28,6 +28,7 @@ jobs:
       - name: Run desktop and iPhone-sized smoke tests
         shell: bash
         run: |
+          ROOT="$PWD"
           python3 -m http.server 4173 --directory recovered >/tmp/bravia-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
@@ -35,6 +36,10 @@ jobs:
           cp .bootstrap/smoke.cjs /tmp/bravia-pw/smoke.cjs
           cd /tmp/bravia-pw
           node smoke.cjs
+          mkdir -p "$ROOT/recovered/assets"
+          cp recovered/QA_BROWSER.txt "$ROOT/recovered/QA_BROWSER.txt"
+          cp recovered/assets/screenshot-desktop.png "$ROOT/recovered/assets/screenshot-desktop.png"
+          cp recovered/assets/screenshot-mobile.png "$ROOT/recovered/assets/screenshot-mobile.png"
       - name: Commit QA screenshots
         if: success()
         shell: bash
