@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - .github/workflows/ui-smoke-bravia.yml
+      - .bootstrap/smoke.cjs
 
 permissions:
   contents: write
