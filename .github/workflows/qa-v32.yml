@@ -1,0 +1,23 @@
+name: BRAVIA V3.2 QA
+on:
+  push:
+    paths:
+      - .github/workflows/qa-v32.yml
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax and asset checks
+        run: |
+          node --check app.js
+          node --check v32.js
+          grep -q 'v32.css?v=32' index.html
+          grep -q 'v32.js?v=32' index.html
+          test -s v32.css
+          echo 'BRAVIA V3.2 QA PASS'
