@@ -1,0 +1,39 @@
+name: Apply BRAVIA V3.5
+on:
+  push:
+    paths:
+      - .github/workflows/apply-v35.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject V3.5 assets and cache busting
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace('BRAVIA TRADING ENGINE // V3.4','BRAVIA TRADING ENGINE // V3.5')
+          s=s.replace('BRAVIA TRADING ENGINE // V3.3','BRAVIA TRADING ENGINE // V3.5')
+          if 'v35.css?v=35' not in s:
+              s=s.replace('</head>','  <link rel="stylesheet" href="v35.css?v=35" />\n</head>')
+          if 'v35.js?v=35' not in s:
+              s=s.replace('</body>','  <script src="v35.js?v=35"></script>\n</body>')
+          p.write_text(s)
+          sw=Path('sw.js')
+          if sw.exists():
+              x=sw.read_text()
+              x=x.replace('bravia-v34-shell','bravia-v35-shell').replace('bravia-v33-shell','bravia-v35-shell')
+              if "'./v35.css?v=35'" not in x:
+                  x=x.replace("'./icon.svg'","'./v35.css?v=35','./v35.js?v=35','./icon.svg'")
+              sw.write_text(x)
+          PY
+          git config user.name "BRAVIA Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js
+          git commit -m "Activate BRAVIA V3.5 touch engine and themes"
+          git push
