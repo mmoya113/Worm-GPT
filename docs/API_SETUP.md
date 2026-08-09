@@ -2,8 +2,8 @@
 
 BRAVIA works in two layers:
 
-1. **GitHub Pages frontend** — public/live Coinbase data, public DEX Screener meme radar, paper engine, charts, CA risk screen, Strategy Arena.
-2. **Optional BRAVIA Backend** — keeps secret keys off the browser and unlocks Birdeye real-time new-token streaming, GoPlus security enrichment, Helius RPC reads and Jupiter quote modelling.
+1. **GitHub Pages frontend** — public/live Coinbase data, public DEX Screener meme radar, paper engine, charts, CA risk screen and Strategy Arena.
+2. **Optional BRAVIA Backend** — keeps secret keys off the browser and unlocks two independent real-time Solana detection paths (Helius + Birdeye), GoPlus security enrichment, Helius RPC reads, Jupiter quote modelling and the optional OpenAI supervisor.
 
 > Never paste secret API keys into `app.js`, GitHub Pages, issues, commits or ChatGPT messages. Put them only in your private server environment variables.
 
@@ -13,10 +13,10 @@ BRAVIA works in two layers:
 |---|---|---:|---|
 | Coinbase Advanced Trade | normal crypto WebSocket + market universe | No for public feeds | ✅ fully live |
 | DEX Screener | Solana pair/liquidity/volume/transaction data | No | ✅ public meme fallback |
-| Birdeye | real-time new token/new pair stream + holder profile | Yes | ⏱ falls back to polling |
+| Helius | real-time Pump.fun creation stream + Solana RPC/read-only wallet balance | Yes | ⏱ loses the on-chain creation stream |
+| Birdeye | independent real-time new-listing stream + holder/security intelligence | Yes | 🟡 Helius + public fallback can still run |
 | GoPlus | Solana token security enrichment | Access token | 🟡 public risk metrics only |
-| Helius | Solana RPC / wallet balance reads / future chain stream | Yes | 🟡 optional |
-| Jupiter Swap V2 | route/order quote modelling for Solana | API key | 🟡 optional |
+| Jupiter Swap V2 | route/order quote modelling for Solana | API key | 🟡 optional in paper mode |
 | OpenAI | paper-session supervisor / diagnostics | API key | 🟡 optional |
 
 ## Environment variables
@@ -38,20 +38,20 @@ The frontend only needs the deployed backend URL. Open **Setup → BRAVIA Backen
 
 ## What you still need to create
 
-### Birdeye
-Create an API key in the Birdeye developer portal. This is the key that matters most for the intended sniper because BRAVIA subscribes to the Solana `SUBSCRIBE_TOKEN_NEW_LISTING` stream.
+### Helius — highest priority for the sniper
+Create a Helius API key. BRAVIA V3.1 opens a Solana WebSocket `transactionSubscribe` against the official Pump.fun program and watches creation transactions containing `InitializeMint2`. When it detects a mint, it immediately queues the CA for market/pool resolution. The same key is used for read-only Solana RPC calls.
 
-### Helius
-Create a Helius API key. The backend uses it for read-only Solana RPC calls. It is also the provider to extend if you later want raw low-latency on-chain subscriptions.
+### Birdeye — second independent real-time source
+Create a Birdeye API key with access to the WebSocket feature you intend to use. BRAVIA also subscribes to `SUBSCRIBE_TOKEN_NEW_LISTING` with meme-platform listings enabled. This gives the sniper a second discovery path rather than relying on one provider.
 
 ### GoPlus
 Create API credentials/access token for the Solana Token Security API. It enriches RugCheck with token-security flags.
 
 ### Jupiter
-Create a Jupiter developer API key. BRAVIA's backend exposes a quote/order modelling proxy without putting the key in the browser.
+Create a Jupiter developer API key. BRAVIA's backend exposes a quote/order-modelling proxy without putting the key in the browser. The current build does **not** submit or sign live transactions.
 
-### OpenAI
-Create an OpenAI API key and keep it only on the backend. The optional AI Supervisor summarizes paper-session results and diagnostics; it is not in the millisecond execution loop and does not place trades.
+### OpenAI — optional
+Create an OpenAI API key and keep it only on the backend. The optional AI Supervisor summarizes paper-session results and diagnostics; it is not in the low-latency execution loop and does not place trades.
 
 ## Running the backend locally
 
@@ -68,16 +68,20 @@ Health check:
 GET /health
 ```
 
-Expected response includes provider readiness and `liveExecutionEnabled: false`.
+Expected response includes provider readiness, Helius/Birdeye sniper connection state and `liveExecutionEnabled: false`.
 
 ## Deploying the backend
 
-The `server/` directory is a normal Node service and includes a `Dockerfile`. It can be deployed to a Node/Docker host. Configure all secrets in the host's encrypted environment-variable settings; do not commit a populated `.env` file.
+The `server/` directory is a normal Node service and includes a `Dockerfile`. A root `render.yaml` blueprint is also included. Configure all secrets in the host's encrypted environment-variable settings; do not commit a populated `.env` file.
 
-## Why the sniper has two speeds
+## How the sniper now detects tokens
 
-**Public mode:** DEX Screener polling is useful for the UI and testing but it is not guaranteed to be the instant a token is created.
+**Public fallback:** DEX Screener fresh-token polling is useful for the UI and paper testing, but it is not guaranteed to observe the exact instant a token is created.
 
-**Backend mode:** Birdeye's real-time new-token WebSocket pushes listings to the server. The server broadcasts them to the browser over SSE. That is the intended low-latency sniper path.
+**Helius path:** the backend watches Pump.fun creation transactions on Solana. A detected mint is pushed into BRAVIA's throttled pair-resolution queue immediately.
 
-Even then, BRAVIA does not treat “token created” as “safe to buy.” A candidate must have an executable market/pool and pass the chosen preset.
+**Birdeye path:** the backend independently listens to Birdeye's real-time new-listing WebSocket. Events enter the same pair-resolution queue.
+
+The resolver is deliberately rate-limited and retries because **mint creation and a usable/indexed trading market are not the same event**. As soon as market/liquidity data becomes available, the browser receives the candidate over SSE and the selected sniper preset decides whether to paper-enter.
+
+This is designed for low latency, but BRAVIA does not claim an exact one-second fill: provider latency, indexing, pool availability and network conditions are outside the program's control.
