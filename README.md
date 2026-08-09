@@ -27,7 +27,7 @@
 | Fees / slippage | ✅ | Configurable paper assumptions included in fills and analytics |
 | Meme Radar + Normal mode | ✅ | Public DEX Screener fallback, automatic paper mode + backend upgrade path |
 | Sniper Lab | ✅ | SAFE / BALANCED / FAST / EXPERIMENTAL presets, paper auto-entry and automatic exits |
-| Real-time new-token path | ✅* | Birdeye WebSocket → BRAVIA backend → browser SSE when API key/backend are configured |
+| Real-time new-token path | ✅* | Helius Pump.fun creation stream + Birdeye new-listing stream → backend → browser SSE |
 | RugCheck Lab | ✅ | Paste a Solana CA and receive liquidity/flow/risk analysis; richer results with backend security APIs |
 | Strategy Arena | ✅ | Eight isolated $10 virtual wallets test normal, meme and sniper strategies in parallel |
 | Persistence | ✅ | Paper analytics and arena state persist locally between refreshes |
@@ -49,7 +49,7 @@
           ┌─────────────────┴─────────────────┐
           │                                   │
   Coinbase normal crypto             Solana meme universe
-  live ticker + products          DEX Screener / Birdeye stream
+  live ticker + products          DEX Screener / Helius / Birdeye
           │                                   │
           ▼                                   ▼
    Signal Engine                      Risk / Meme Engine
@@ -94,18 +94,22 @@ PAPER BUY → TP / SL / trailing / max hold
 **Real-time backend path**
 
 ```text
-Birdeye SUBSCRIBE_TOKEN_NEW_LISTING
-        ↓
-BRAVIA backend receives event
-        ↓
-DEX pair / liquidity is resolved
-        ↓
-SSE pushes candidate to browser
-        ↓
-filters run immediately
-        ↓
-PAPER BUY when preset passes
+Helius Pump.fun creation tx ─┐
+                            ├→ mint detected
+Birdeye new-token listing ──┘
+                                  ↓
+                      throttled pair resolver
+                                  ↓
+                       market/liquidity ready?
+                                  ↓
+                       SSE candidate → browser
+                                  ↓
+                         sniper preset filters
+                                  ↓
+                    PAPER BUY only when passed
 ```
+
+Helius watches the Pump.fun creation flow directly on Solana while Birdeye provides an independent new-listing feed. BRAVIA de-duplicates both sources and retries market resolution because a mint can exist before a usable/indexed market does.
 
 A newly created token is **not automatically tradable or safe**. BRAVIA waits for usable market/pool data and applies the configured filters.
 
@@ -192,9 +196,9 @@ See **[`docs/API_SETUP.md`](docs/API_SETUP.md)** for exact setup.
 |---|---|
 | Coinbase Advanced Trade | live normal-crypto market data |
 | DEX Screener | public Solana token/pair/liquidity fallback |
-| Birdeye | real-time new-token stream + holder intelligence |
+| Birdeye | independent real-time new-listing stream + holder intelligence |
 | GoPlus | Solana token-security enrichment |
-| Helius | Solana RPC/read layer |
+| Helius | Pump.fun creation stream + Solana RPC/read layer |
 | Jupiter Swap V2 | Solana route/order quote modelling |
 | OpenAI | optional paper-session supervisor |
 
