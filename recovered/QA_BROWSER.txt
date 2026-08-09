@@ -1,0 +1,4 @@
+BRAVIA V3 BROWSER UI QA
+desktop: title=BRAVIA // Trading Lab; equity=$10.00; chart=634x317; arenaRows=8; errors=0
+mobile: title=BRAVIA // Trading Lab; equity=$10.00; chart=351x245; arenaRows=8; errors=0
+overall: PASS
