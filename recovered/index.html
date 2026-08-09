@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#05060b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BRAVIA" />
+  <meta name="description" content="BRAVIA Trading Lab — live crypto market radar, realistic paper trading, memecoin scanner, sniper lab and strategy arena." />
+  <title>BRAVIA // Trading Lab</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="ambient"></div><div class="scanlines"></div>
+
+  <div id="bootModal" class="modal-backdrop">
+    <section class="boot-card panel">
+      <div class="boot-logo">B</div>
+      <div class="eyebrow">BRAVIA TRADING ENGINE // V3</div>
+      <h1>Choose your <span>execution mode</span></h1>
+      <p class="boot-copy">Start with the realistic simulator. Live-wallet connection is available as a read-only safety preview; autonomous real-money execution stays locked until a secure backend is deployed and explicitly enabled.</p>
+      <div class="boot-options">
+        <button id="choosePaper" class="boot-option selected"><span class="boot-icon">🧪</span><b>PAPER TRADING</b><small>$10 virtual wallet · live market data · no real orders</small><em>RECOMMENDED</em></button>
+        <button id="chooseLive" class="boot-option"><span class="boot-icon">🔐</span><b>LIVE WALLET</b><small>Connect public wallet address · execution locked</small><em>SAFETY PREVIEW</em></button>
+      </div>
+      <div class="boot-footer">No seed phrase or private key is ever requested.</div>
+    </section>
+  </div>
+
+  <main class="app-shell">
+    <header class="topbar panel">
+      <div class="brand-wrap">
+        <div class="brand-logo">B</div>
+        <div><div class="eyebrow">AUTONOMOUS MARKET LAB</div><div class="brand">BRAVIA <span>TRADING ENGINE</span></div></div>
+      </div>
+      <div class="status-cluster">
+        <div class="status-pill"><i id="feedDot"></i><span id="feedStatus">CONNECTING</span></div>
+        <div class="status-pill paper" id="executionBadge">PAPER MODE</div>
+        <button id="openSetup" class="icon-btn" aria-label="API setup">⚙</button>
+      </div>
+    </header>
+
+    <nav class="desktop-nav panel" id="desktopNav">
+      <button class="nav-btn active" data-view="overview">◉ OVERVIEW</button>
+      <button class="nav-btn" data-view="markets">◫ MARKETS</button>
+      <button class="nav-btn" data-view="memes">✦ MEME RADAR</button>
+      <button class="nav-btn" data-view="sniper">⌖ SNIPER</button>
+      <button class="nav-btn" data-view="rugcheck">🛡 RUG CHECK</button>
+      <button class="nav-btn" data-view="arena">⚔ ARENA</button>
+      <button class="nav-btn" data-view="setup">⚙ SETUP</button>
+    </nav>
+
+    <section class="view active" id="view-overview">
+      <section class="hero-grid">
+        <article class="panel wallet-card">
+          <div class="card-head"><div class="panel-title">PAPER WALLET</div><span class="mini-badge">LIVE MARK-TO-MARKET</span></div>
+          <div class="balance" id="equity">$10.00</div>
+          <div class="pnl positive" id="pnl">+$0.00 · +0.00%</div>
+          <div class="wallet-grid">
+            <div><span>Cash</span><b id="cash">$10.00</b></div><div><span>Exposure</span><b id="exposure">$0.00</b></div>
+            <div><span>Closed trades</span><b id="tradeCount">0</b></div><div><span>Open</span><b id="openCount">0</b></div>
+          </div>
+          <div class="controls-row"><button id="startBtn" class="btn primary">▶ START BOT</button><button id="stopBtn" class="btn danger" disabled>■ STOP</button></div>
+        </article>
+
+        <article class="panel chart-card">
+          <div class="chart-head">
+            <div><div class="panel-title">LIVE MARKET CHART</div><div class="pair" id="chartPair">BTC-USD</div><div class="chart-meta" id="chartMeta">Waiting for live ticks…</div></div>
+            <div class="price-block"><strong id="chartPrice">—</strong><span id="chartChange">—</span></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart" aria-label="live crypto chart"></canvas><div class="chart-cross-label" id="chartLabel"></div></div>
+          <div class="chart-tools"><div class="pair-switch" id="quickPairs"></div><div class="range-switch"><button class="chip active" data-range="60">1M</button><button class="chip" data-range="300">5M</button><button class="chip" data-range="900">15M</button></div></div>
+        </article>
+
+        <article class="panel mode-card">
+          <div class="card-head"><div class="panel-title">TRADING MODE</div><span id="modePulse" class="mini-badge pink">AUTO</span></div>
+          <div class="mode-grid" id="modeGrid">
+            <button data-mode="AUTO" class="mode active"><b>AUTO</b><span>Adaptive engine</span></button>
+            <button data-mode="ULTRA" class="mode"><b>ULTRA</b><span>Maximum activity</span></button>
+            <button data-mode="FAST" class="mode"><b>FAST</b><span>High trade density</span></button>
+            <button data-mode="BALANCED" class="mode"><b>BALANCED</b><span>More confirmation</span></button>
+            <button data-mode="TREND" class="mode"><b>TREND</b><span>Longer holds</span></button>
+            <button data-mode="CUSTOM" class="mode"><b>CUSTOM</b><span>Your parameters</span></button>
+          </div>
+          <div class="mode-stats"><div><span>Signal threshold</span><b id="cfgThreshold">—</b></div><div><span>Cooldown</span><b id="cfgCooldown">—</b></div><div><span>TP / SL</span><b id="cfgExit">—</b></div><div><span>Position size</span><b id="cfgSize">—</b></div><div><span>Max positions</span><b id="cfgMaxPositions">—</b></div></div>
+        </article>
+      </section>
+
+      <section class="section-head"><div><div class="eyebrow">MULTI-ASSET SCANNER</div><h2>Live opportunities</h2></div><div class="section-actions"><input id="scannerSearch" class="search" placeholder="Search coin…" /><span id="assetCount" class="mini-badge">0 LIVE</span></div></section>
+      <section class="scanner-grid" id="scanner"></section>
+
+      <section class="lower-grid">
+        <article class="panel positions-panel"><div class="card-head"><div class="panel-title">OPEN POSITIONS</div><span id="positionsValue" class="mini-badge">$0.00</span></div><div id="positions" class="empty">No open positions.</div></article>
+        <article class="panel terminal-panel"><div class="terminal-head"><div class="panel-title">LIVE EXECUTION LOG</div><button id="clearLog" class="text-btn">CLEAR</button></div><div id="log" class="terminal"></div></article>
+      </section>
+
+      <section class="panel stats-panel"><div class="panel-title">SESSION ANALYTICS</div><div class="stats-grid"><div><span>Win rate</span><b id="winRate">0%</b></div><div><span>Realized PnL</span><b id="realized">$0.00</b></div><div><span>Fees + slippage</span><b id="fees">$0.00</b></div><div><span>Max drawdown</span><b id="drawdown">0.00%</b></div><div><span>Best trade</span><b id="bestTrade">—</b></div><div><span>Worst trade</span><b id="worstTrade">—</b></div></div><div class="assumptions">Paper fills use live bid/ask when available plus configurable fees and slippage. Results are simulations, not a promise of future profit.</div></section>
+    </section>
+
+    <section class="view" id="view-markets">
+      <section class="section-head"><div><div class="eyebrow">COINBASE SPOT UNIVERSE</div><h2>Normal crypto market</h2></div><div class="section-actions"><input id="marketSearch" class="search" placeholder="BTC, DOGE, LINK…"/><span id="marketUniverseCount" class="mini-badge">DISCOVERING</span></div></section>
+      <article class="panel market-table-card"><div class="market-table-head"><span>ASSET</span><span>PRICE</span><span>24H</span><span>SIGNAL</span><span>SCORE</span><span>SPREAD</span></div><div id="marketTable" class="market-table"></div></article>
+    </section>
+
+    <section class="view" id="view-memes">
+      <section class="section-head"><div><div class="eyebrow">SOLANA MEME RADAR</div><h2>Fresh & active memecoins</h2></div><div class="section-actions"><button id="refreshMemes" class="btn secondary">↻ REFRESH</button><span id="memeSourceBadge" class="mini-badge pink">DEXSCREENER</span></div></section>
+      <div class="info-strip">Public fallback scans fresh DEX Screener profiles. With BRAVIA Backend + Birdeye configured, the source upgrades to real-time new-token/new-pair streaming.</div>
+      <section id="memeGrid" class="meme-grid"></section>
+    </section>
+
+    <section class="view" id="view-sniper">
+      <section class="section-head"><div><div class="eyebrow">LOW-LATENCY PAPER SNIPER</div><h2>Sniper control room</h2></div><div class="section-actions"><button id="armSniper" class="btn danger-outline">⌖ ARM SNIPER</button><span id="sniperState" class="mini-badge">DISARMED</span></div></section>
+      <section class="sniper-layout">
+        <article class="panel presets-card"><div class="panel-title">FILTER PRESETS</div><div id="sniperPresets" class="preset-list"></div><div class="preset-readout" id="presetReadout"></div></article>
+        <article class="panel sniper-feed-card"><div class="card-head"><div class="panel-title">NEW TOKEN FEED</div><span id="sniperLatency" class="mini-badge">POLLING</span></div><div id="sniperFeed" class="sniper-feed empty">Waiting for new Solana tokens…</div></article>
+        <article class="panel sniper-stats-card"><div class="panel-title">SNIPER SESSION</div><div class="big-stat"><span>Detected</span><b id="sniperDetected">0</b></div><div class="big-stat"><span>Passed</span><b id="sniperPassed">0</b></div><div class="big-stat"><span>Paper entries</span><b id="sniperEntries">0</b></div><div class="big-stat"><span>Rejected risk</span><b id="sniperRejected">0</b></div></article>
+      </section>
+    </section>
+
+    <section class="view" id="view-rugcheck">
+      <section class="section-head"><div><div class="eyebrow">TOKEN FORENSICS</div><h2>RugCheck Lab</h2></div></section>
+      <article class="panel rug-card">
+        <div class="rug-input-row"><input id="caInput" class="ca-input" placeholder="Paste Solana contract address (CA)" autocomplete="off"/><button id="analyzeCA" class="btn primary">🛡 ANALYZE</button></div>
+        <div class="rug-note">This is a risk screen, not a guarantee. Public mode checks market/liquidity/flow data; backend mode additionally combines Birdeye + GoPlus holder/security signals.</div>
+        <div id="rugResult" class="rug-result empty">Paste a CA to inspect liquidity, pair age, buy/sell flow, holder/security data when available, and BRAVIA's preliminary risk score.</div>
+      </article>
+    </section>
+
+    <section class="view" id="view-arena">
+      <section class="section-head"><div><div class="eyebrow">TEST ALL MODES</div><h2>Strategy Arena</h2></div><div class="section-actions"><button id="arenaToggle" class="btn primary">⚔ START ALL</button><button id="arenaReset" class="btn secondary">RESET</button></div></section>
+      <div class="info-strip">Every strategy gets an independent $10 virtual wallet. This lets you compare modes fairly without one strategy stealing capital from another.</div>
+      <article class="panel leaderboard"><div class="leader-head"><span>#</span><span>STRATEGY</span><span>EQUITY</span><span>PNL</span><span>TRADES</span><span>WIN</span><span>MAX DD</span><span>SCORE</span></div><div id="arenaRows"></div></article>
+      <article class="panel ai-card"><div class="card-head"><div><div class="panel-title">AI SUPERVISOR</div><div class="asset-sub">Optional OpenAI backend review — never used in the low-latency execution loop</div></div><button id="aiReviewBtn" class="btn secondary">✦ REVIEW SESSION</button></div><div id="aiReview" class="ai-review empty">Connect the BRAVIA backend with an OpenAI API key to get a concise review of paper performance, drawdown, trade density and which modes deserve more testing.</div></article>
+    </section>
+
+    <section class="view" id="view-setup">
+      <section class="section-head"><div><div class="eyebrow">CONNECTIONS & SAFETY</div><h2>System setup</h2></div></section>
+      <section class="setup-grid">
+        <article class="panel setup-card"><div class="panel-title">DATA PROVIDERS</div><div id="providerList" class="provider-list"></div></article>
+        <article class="panel setup-card"><div class="panel-title">BRAVIA BACKEND</div><label class="field-label">Backend URL<input id="backendUrl" class="field" placeholder="https://your-bravia-api.example.com" /></label><button id="saveBackend" class="btn secondary">SAVE & TEST</button><div id="backendStatus" class="setup-status">Not configured. Public browser feeds remain available.</div><div class="security-callout">🔐 API secrets belong on the backend only. Never paste Helius/Birdeye/GoPlus/Jupiter secrets into this GitHub Pages site.</div></article>
+        <article class="panel setup-card"><div class="panel-title">PAPER ASSUMPTIONS</div><label class="field-label">Starting balance ($)<input id="settingCash" class="field" type="number" min="1" step="1" value="10" /></label><label class="field-label">Fee per side (%)<input id="settingFee" class="field" type="number" min="0" max="2" step="0.01" value="0.15" /></label><label class="field-label">Slippage per side (%)<input id="settingSlippage" class="field" type="number" min="0" max="2" step="0.01" value="0.03" /></label><button id="savePaperSettings" class="btn secondary">SAVE ASSUMPTIONS</button></article>
+        <article class="panel setup-card"><div class="panel-title">LIVE WALLET SAFETY</div><div class="wallet-safety"><b id="walletState">NOT CONNECTED</b><span id="walletAddress">No wallet public key</span></div><button id="connectWallet" class="btn secondary">🔐 CONNECT WALLET (READ-ONLY)</button><p class="small-copy">BRAVIA never asks for a seed phrase. Browser-wallet connection only exposes the public address. Autonomous signing/execution is intentionally disabled in this build.</p></article>
+      </section>
+    </section>
+  </main>
+
+  <nav class="mobile-nav panel" id="mobileNav">
+    <button class="active" data-view="overview"><b>◉</b><span>Home</span></button><button data-view="markets"><b>◫</b><span>Markets</span></button><button data-view="memes"><b>✦</b><span>Memes</span></button><button data-view="sniper"><b>⌖</b><span>Sniper</span></button><button data-view="arena"><b>⚔</b><span>Arena</span></button><button data-view="setup"><b>⚙</b><span>Setup</span></button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
