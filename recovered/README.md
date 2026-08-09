@@ -17,13 +17,13 @@
 
 | System | Status | What it does |
 |---|---|---|
-| Normal crypto engine | ✅ | Discovers/scans up to ~48 Coinbase USD spot markets and consumes live ticker data |
+| Normal crypto engine | ✅ | Discovers/scans up to ~80 Coinbase USD spot markets and consumes live ticker data |
 | FAST / ULTRA | ✅ | Much shorter cooldowns and higher trade density than V1 |
 | Live charts | ✅ | Rescaled canvas chart with grid, price labels, current-price line and 1m/5m/15m windows |
 | Mobile UI | ✅ | Dedicated iPhone layout + fixed bottom navigation + responsive cards/tables |
 | Paper wallet | ✅ | Unified normal-crypto + memecoin simulated portfolio |
 | Fees / slippage | ✅ | Configurable paper assumptions included in fills and analytics |
-| Meme Radar | ✅ | Public DEX Screener fallback + backend upgrade path |
+| Meme Radar + Normal mode | ✅ | Public DEX Screener fallback, automatic paper mode + backend upgrade path |
 | Sniper Lab | ✅ | SAFE / BALANCED / FAST / EXPERIMENTAL presets, paper auto-entry and automatic exits |
 | Real-time new-token path | ✅* | Birdeye WebSocket → BRAVIA backend → browser SSE when API key/backend are configured |
 | RugCheck Lab | ✅ | Paste a Solana CA and receive liquidity/flow/risk analysis; richer results with backend security APIs |

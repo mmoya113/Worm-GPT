@@ -1,0 +1,11 @@
+BRAVIA V3 STATIC QA
+app.js syntax: PASS
+server syntax: PASS
+HTML IDs: 88
+JS element references: 78
+Missing IDs: none
+Duplicate IDs: none
+Normal crypto discovery cap: 80
+Meme Normal: enabled
+Sniper presets: 4
+Live execution: hard locked in server
