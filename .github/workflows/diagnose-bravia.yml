@@ -1,0 +1,44 @@
+name: Diagnose recovered BRAVIA
+
+on:
+  push:
+    paths:
+      - .github/workflows/diagnose-bravia.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Diagnose recovered source
+        shell: bash
+        run: |
+          set +e
+          {
+            echo 'BRAVIA RECOVERY DIAGNOSTIC'
+            date -u
+            echo
+            wc -c recovered/app.js recovered/index.html recovered/style.css recovered/server/index.mjs
+            echo
+            echo '--- app.js syntax ---'
+            node --check recovered/app.js
+            echo "app_exit=$?"
+            echo
+            echo '--- server syntax ---'
+            node --check recovered/server/index.mjs
+            echo "server_exit=$?"
+            echo
+            echo '--- app tail (last 8000 bytes) ---'
+            tail -c 8000 recovered/app.js
+          } > recovered/DIAGNOSTIC.txt 2>&1
+          git config user.name 'BRAVIA Diagnostics'
+          git config user.email 'actions@users.noreply.github.com'
+          git add recovered/DIAGNOSTIC.txt
+          git commit -m 'Add BRAVIA recovery diagnostic' || exit 0
+          git push origin HEAD:main
