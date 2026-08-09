@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Reconstruct truncated app and apply Phase 2/3 hardening
+      - name: Reconstruct and harden
         shell: bash
         run: |
           python3 - <<'PY'
@@ -24,68 +24,38 @@ jobs:
           appp=Path('recovered/app.js')
           app=appp.read_text()
           marker='function bindUI(){'
-          assert marker in app, 'bindUI marker missing'
-          prefix=app.split(marker,1)[0]
-          tail=Path('.bootstrap/app-tail.js').read_text()
-          app=prefix+tail
-
-          # Higher-density paper modes while keeping friction realistic.
-          app=app.replace("ULTRA:    { threshold:.515, cooldown:1000,  minHold:1500, maxHold:18000,  tp:.0036, sl:.0025, size:.12, maxPositions:7 },",
-                          "ULTRA:    { threshold:.505, cooldown:600,   minHold:800,  maxHold:10000,  tp:.0048, sl:.0028, size:.10, maxPositions:8 },")
-          app=app.replace("FAST:     { threshold:.525, cooldown:1800,  minHold:2200, maxHold:30000,  tp:.0045, sl:.0030, size:.14, maxPositions:6 },",
-                          "FAST:     { threshold:.515, cooldown:1000,  minHold:1200, maxHold:18000,  tp:.0060, sl:.0035, size:.12, maxPositions:7 },")
-          app=app.replace(".slice(0,48);$('marketUniverseCount')", ".slice(0,80);$('marketUniverseCount')")
-
-          meme_normal="""
-function syncMemeAutoButton(){const b=$('memeAutoToggle');if(!b)return;b.textContent=state.memeAuto?'■ STOP MEME NORMAL':'▶ MEME NORMAL';b.className=state.memeAuto?'btn primary':'btn secondary'}
-function evaluateMemeNormalBot(){
-  if(!state.running||!state.memeAuto||!state.memePairs.length)return;
-  state.memeLastAction ||= {};
-  const candidates=state.memePairs.map(pair=>({pair,r:pair._risk||scoreMeme(pair)})).filter(x=>x.r.score>=66&&x.r.liq>=8000&&x.r.tx>=15&&x.r.buyRatio>=.51&&x.r.ageMin<=360).sort((a,b)=>b.r.score-a.r.score);
-  for(const {pair,r} of candidates){const ca=pair.baseToken?.address;if(!ca||state.memePositions[ca]||Date.now()-(state.memeLastAction[ca]||0)<15000)continue;if(Object.keys(state.memePositions).length>=2||!canSpend(.25))break;if(paperBuyMeme(pair,`meme normal score ${r.score}`))state.memeLastAction[ca]=Date.now()}
-  syncMemeAutoButton();
-}
-"""
+          assert marker in app
+          app=app.split(marker,1)[0]+Path('.bootstrap/app-tail.js').read_text()
+          app=app.replace("ULTRA:    { threshold:.515, cooldown:1000,  minHold:1500, maxHold:18000,  tp:.0036, sl:.0025, size:.12, maxPositions:7 },","ULTRA:    { threshold:.505, cooldown:600,   minHold:800,  maxHold:10000,  tp:.0048, sl:.0028, size:.10, maxPositions:8 },")
+          app=app.replace("FAST:     { threshold:.525, cooldown:1800,  minHold:2200, maxHold:30000,  tp:.0045, sl:.0030, size:.14, maxPositions:6 },","FAST:     { threshold:.515, cooldown:1000,  minHold:1200, maxHold:18000,  tp:.0060, sl:.0035, size:.12, maxPositions:7 },")
+          app=app.replace(".slice(0,48);$('marketUniverseCount')",".slice(0,80);$('marketUniverseCount')")
+          meme_normal="function syncMemeAutoButton(){const b=$('memeAutoToggle');if(!b)return;b.textContent=state.memeAuto?'■ STOP MEME NORMAL':'▶ MEME NORMAL';b.className=state.memeAuto?'btn primary':'btn secondary'}\nfunction evaluateMemeNormalBot(){if(!state.running||!state.memeAuto||!state.memePairs.length)return;state.memeLastAction||={};const candidates=state.memePairs.map(pair=>({pair,r:pair._risk||scoreMeme(pair)})).filter(x=>x.r.score>=66&&x.r.liq>=8000&&x.r.tx>=15&&x.r.buyRatio>=.51&&x.r.ageMin<=360).sort((a,b)=>b.r.score-a.r.score);for(const {pair,r} of candidates){const ca=pair.baseToken?.address;if(!ca||state.memePositions[ca]||Date.now()-(state.memeLastAction[ca]||0)<15000)continue;if(Object.keys(state.memePositions).length>=2||!canSpend(.25))break;if(paperBuyMeme(pair,`meme normal score ${r.score}`))state.memeLastAction[ca]=Date.now()}syncMemeAutoButton()}\n"
           app=app.replace('function renderMemePositions(){renderPositions()}','function renderMemePositions(){renderPositions()}\n'+meme_normal)
-          app=app.replace("$('refreshMemes').addEventListener('click',()=>refreshMemes());",
-                          "$('refreshMemes').addEventListener('click',()=>refreshMemes());$('memeAutoToggle').addEventListener('click',()=>{state.memeAuto=!state.memeAuto;syncMemeAutoButton();log('SNIPER',state.memeAuto?'Meme Normal paper mode enabled':'Meme Normal paper mode disabled');toast(state.memeAuto?'Meme Normal enabled':'Meme Normal stopped')});")
-          app=app.replace("restore();initArena();", "restore();initArena();if(typeof state.memeAuto!=='boolean')state.memeAuto=false;syncMemeAutoButton();")
-          app=app.replace("setInterval(evaluateNormalBot,500);setInterval(evaluateMemePositions,700);",
-                          "setInterval(evaluateNormalBot,400);setInterval(evaluateMemePositions,650);setInterval(evaluateMemeNormalBot,800);")
+          app=app.replace("$('refreshMemes').addEventListener('click',()=>refreshMemes());","$('refreshMemes').addEventListener('click',()=>refreshMemes());$('memeAutoToggle').addEventListener('click',()=>{state.memeAuto=!state.memeAuto;syncMemeAutoButton();log('SNIPER',state.memeAuto?'Meme Normal paper mode enabled':'Meme Normal paper mode disabled');toast(state.memeAuto?'Meme Normal enabled':'Meme Normal stopped')});")
+          app=app.replace("restore();initArena();","restore();initArena();if(typeof state.memeAuto!=='boolean')state.memeAuto=false;syncMemeAutoButton();")
+          app=app.replace("setInterval(evaluateNormalBot,500);setInterval(evaluateMemePositions,700);","setInterval(evaluateNormalBot,400);setInterval(evaluateMemePositions,650);setInterval(evaluateMemeNormalBot,800);")
           appp.write_text(app)
-
-          idx=Path('recovered/index.html')
-          html=idx.read_text()
+          idx=Path('recovered/index.html');html=idx.read_text()
           old='<div class="section-actions"><button id="refreshMemes" class="btn secondary">↻ REFRESH</button><span id="memeSourceBadge" class="mini-badge pink">DEXSCREENER</span></div>'
           new='<div class="section-actions"><button id="memeAutoToggle" class="btn secondary">▶ MEME NORMAL</button><button id="refreshMemes" class="btn secondary">↻ REFRESH</button><span id="memeSourceBadge" class="mini-badge pink">DEXSCREENER</span></div>'
-          assert old in html, 'meme section marker missing'
+          assert old in html
           idx.write_text(html.replace(old,new))
-
-          readme=Path('recovered/README.md')
-          s=readme.read_text().replace('up to ~48 Coinbase USD spot markets','up to ~80 Coinbase USD spot markets')
-          s=s.replace('| Meme Radar | ✅ | Public DEX Screener fallback + backend upgrade path |','| Meme Radar + Normal mode | ✅ | Public DEX Screener fallback, automatic paper mode + backend upgrade path |')
-          readme.write_text(s)
+          readme=Path('recovered/README.md');s=readme.read_text().replace('up to ~48 Coinbase USD spot markets','up to ~80 Coinbase USD spot markets').replace('| Meme Radar | ✅ | Public DEX Screener fallback + backend upgrade path |','| Meme Radar + Normal mode | ✅ | Public DEX Screener fallback, automatic paper mode + backend upgrade path |');readme.write_text(s)
           PY
-
           set -e
           node --check recovered/app.js
           node --check recovered/server/index.mjs
           python3 - <<'PY'
           from pathlib import Path
           import re
-          html=Path('recovered/index.html').read_text()
-          js=Path('recovered/app.js').read_text()
-          ids=re.findall(r'\bid="([^"]+)"',html)
-          refs=re.findall(r"\$\('([^']+)'\)",js)
-          dup=sorted({x for x in ids if ids.count(x)>1})
-          missing=sorted(set(refs)-set(ids))
+          html=Path('recovered/index.html').read_text();js=Path('recovered/app.js').read_text()
+          ids=re.findall(r'\bid="([^"]+)"',html);refs=re.findall(r"\$\('([^']+)'\)",js)
+          dup=sorted({x for x in ids if ids.count(x)>1});missing=sorted(set(refs)-set(ids))
           assert not dup, f'duplicate HTML ids: {dup}'
           assert not missing, f'JS references missing HTML ids: {missing}'
-          report=f'''BRAVIA V3 STATIC QA\napp.js syntax: PASS\nserver syntax: PASS\nHTML IDs: {len(ids)}\nJS element references: {len(set(refs))}\nMissing IDs: none\nDuplicate IDs: none\nNormal crypto discovery cap: 80\nMeme Normal: enabled\nSniper presets: 4\nLive execution: hard locked in server\n'''
-          Path('recovered/QA_STATIC.txt').write_text(report)
-          print(report)
+          lines=['BRAVIA V3 STATIC QA','app.js syntax: PASS','server syntax: PASS',f'HTML IDs: {len(ids)}',f'JS element references: {len(set(refs))}','Missing IDs: none','Duplicate IDs: none','Normal crypto discovery cap: 80','Meme Normal: enabled','Sniper presets: 4','Live execution: hard locked in server']
+          Path('recovered/QA_STATIC.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines))
           PY
-
           git config user.name 'BRAVIA Builder'
           git config user.email 'actions@users.noreply.github.com'
           git add recovered
