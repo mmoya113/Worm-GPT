@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           python3 -m http.server 8080 >/tmp/bravia-http.log 2>&1 &
-          cat > /tmp/qa.mjs <<'JS'
+          cat > qa.mjs <<'JS'
           import { chromium } from 'playwright';
           const browser=await chromium.launch({headless:true});
           const page=await browser.newPage({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
@@ -45,4 +45,4 @@ jobs:
           console.log('PASS meme wallet + sniper wallet + arena drilldown + mobile taps');
           await browser.close();
           JS
-          node /tmp/qa.mjs
+          node qa.mjs
