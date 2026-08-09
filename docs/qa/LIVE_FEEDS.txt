@@ -1,0 +1,4 @@
+Coinbase product discovery: PASS (46 usable USD spot products returned)
+DEX Screener Solana meme radar: PASS (10 fresh profiles, 10 pair rows)
+Coinbase WebSocket ticker: PASS (ETH-USD)
+Overall public-feed connectivity: PASS
